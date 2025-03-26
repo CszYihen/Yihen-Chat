@@ -1,0 +1,20 @@
+server:
+  port: 8080 # your port
+  address: 0.0.0.0
+spring:
+  application:
+    name: Yihen-Chat # service name
+
+  datasource: 
+    driver-class-name: com.mysql.cj.jdbc.Driver # mysql8.0
+    url: jdbc:mysql://localhost:3306/yihenChat?serverTimezone=GMT%2B8
+    username: 
+    password: 
+
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true 
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl 
+
