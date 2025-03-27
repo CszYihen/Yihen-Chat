@@ -25,7 +25,7 @@ new Vue({
              * }
              */
             onlineUsers: {}, // 在线用户
-            num_message:0, // 消息总数量
+            num_message:0, // 未读消息总数量
             every_user_message:[],//每个用户的消息
             scroll:null,
             myMessage: false,
@@ -70,22 +70,58 @@ new Vue({
             this.myMessage = false
             $('#talk_list').empty()
 
-            let messages = this.onlineUsers[id]["unread_messages"]
+            this.getChatRecord(this.id_me,id,this.me.img,img)
 
-            if (messages != undefined){
-                for(let j =0 ; j<messages.length;j++){
-                    text=messages[j].replace("CszYihen", img)
-    
+        },
+
+        // 获取历史记录
+        getChatRecord(from ,to , me_img , to_img){
+            let _this = this
+            let message = {
+                "from" : from,
+                "to":to
+            }
+            axios({
+                method: "post",
+                url: "http://localhost:8080/message/record" ,
+                data: message
+            }).then(function (resp) {
+                if (!(resp.data.code == 200)) {
+                    _this.$message({
+                        message: resp.data.message,
+                        type: 'error'
+                    });
+
+                } else {
+                    chatRecord = resp.data.data
+                    _this.showChatRecord(chatRecord , me_img,to_img)
+                    _this.num_message-=_this.onlineUsers[to]["num_unread_messages"]
+                    _this.onlineUsers[to]["num_unread_messages"]=0
+                }
+
+            })
+        },
+
+        // 聊天记录重现
+        showChatRecord(records,me_img,to_img){
+            text1_to= '<li class="left_word"><img class="avatar"  src='
+            text1_me= '<li class="right_word"><img class="avatar"  src='
+            text2= '> <span>'
+            text3 = '</span></li>'
+
+            for(let i =0 ;i < records.length; i++){
+                let parts= records[i].split(":",2) // id , text
+                if(parts[0] == this.id_me){
+                    let text = text1_me+me_img+text2+parts[1]+text3
+                    $('#talk_list').append(text)
+                }else if (parts[0] == this.other.userId){
+                    let text = text1_to+to_img+text2+parts[1]+text3
                     $('#talk_list').append(text)
                 }
-                this.num_message-=this.onlineUsers[id]["num_unread_messages"]
-                this.onlineUsers[id]["num_unread_messages"]=0
-                this.onlineUsers[id]["unread_messages"]=[]
-                let scroll=document.getElementById('main')
-                scroll.scrollTop=scroll.scrollHeight
+                
             }
-
-
+            let scroll=document.getElementById('main')
+            scroll.scrollTop=scroll.scrollHeight
         },
 
 
@@ -119,7 +155,11 @@ new Vue({
         // 初始化
         init() {
             this.ws = new WebSocket("ws://localhost:8080/webSocket/"+this.id_me);
+             
+
+            
             let _this = this
+
             this.ws.onmessage = function(event) {
                 var message=JSON.parse(event.data);
                 if (message.to==-1){ // 群发消息
@@ -154,14 +194,11 @@ new Vue({
                         }else{
                             _this.num_message+=1 
                             if(_this.onlineUsers[message.from]["unread_messages"] == undefined){
-                                _this.onlineUsers[message.from]["unread_messages"] =[]
+                                _this.onlineUsers[message.from]["num_unread_messages"] =0
                             }
 
-                            text = '<li class="left_word"><img class="avatar"  src=CszYihen /> <span>' + message.text + '</span></li>'
-                            
 
-                            _this.onlineUsers[message.from]["unread_messages"].push(text)
-                            _this.onlineUsers[message.from]["num_unread_messages"]=_this.onlineUsers[message.from]["unread_messages"].length
+                            _this.onlineUsers[message.from]["num_unread_messages"]++
 
 
                             
@@ -184,7 +221,6 @@ new Vue({
         this.id_me = this.getValue("me");
         this.init()
         this.getMe()
-
     }
 })
 

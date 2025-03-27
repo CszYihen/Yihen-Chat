@@ -9,6 +9,7 @@ body {
 
     background-image: url("../img/chatbackground.jpg");
     background-size: cover;
+    margin: 0;
 }
 
 .wrap {

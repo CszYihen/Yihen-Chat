@@ -10,7 +10,7 @@
 
 1. 创建项目数据库表
    - 数据库表SQL脚本: `Yihen-Chat/tb_user.sql`
-2. 修改配置文件（application.yml）中连接数据库部分
+2. 修改配置文件（application.yml）中连接数据库与redis部分
 3. 登陆页面: http://127.0.0.1:5500/ChatRoom/pages/login.html (如果使用VsCode启动前端，具体端口根据打开前端页面的方式)
    - 用户ID: 1 ; 密码:  1234
    - 用户 ID: 2 ; 密码: 6666
@@ -40,6 +40,3 @@
 
 
 
-## 局限
-
-​		聊天历史记录没有本地化存储，刷新后聊天记录清空

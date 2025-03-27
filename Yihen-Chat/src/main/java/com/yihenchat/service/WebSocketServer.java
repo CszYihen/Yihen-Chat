@@ -6,20 +6,19 @@ import com.yihenchat.bean.Message;
 import com.yihenchat.bean.OnlineUser;
 import com.yihenchat.service.impl.LoginServiceImpl;
 import com.yihenchat.service.impl.UserServiceImpl;
-import jakarta.websocket.OnClose;
-import jakarta.websocket.OnMessage;
-import jakarta.websocket.OnOpen;
-import jakarta.websocket.Session;
+import com.yihenchat.utils.MessageUtil;
+import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.annotations.One;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // 定义WebSocket服务端点
@@ -32,12 +31,20 @@ public class WebSocketServer {
     // 存放每个用户对应的WebSocketServer对象，使用线程安全Set
     private static ConcurrentHashMap<Long, Session> sessionPools = new ConcurrentHashMap<>();
 
+    // Spring管理的Bean都是单例的，而WebSocket是多对象的，所以无法使用@Autowired直接注入
+    // 将需要注入的变量改为静态的,通过下面的方式注入
+    private static   MessageUtil messageUtil;
+    @Autowired
+    public void setMessageUtil(MessageUtil messageUtil) {
+        WebSocketServer.messageUtil = messageUtil;
+    }
 
     @OnOpen //建立连接成功调用
     public void onOpen(Session session, @PathParam(value = "user-id") Long userId) {
         sessionPools.put(userId, session);
         // 在线人数+1
         onlineNum.incrementAndGet();
+        // 广播在线信息
         broadcastOnlineMessage();
         log.error("用户:"+userId+"上线!");
     }
@@ -51,6 +58,10 @@ public class WebSocketServer {
         if (msg.getTo().equals(-1)) {
             // TODO 群发
         }else {
+            // 存储聊天记录
+            // TODO 异步实现
+            messageUtil.saveMessage(msg);
+            // 转发信息
             sendInfo(msg.getTo(), JSON.toJSONString(msg,true));
         }
     }
@@ -58,6 +69,7 @@ public class WebSocketServer {
     //关闭连接时调用
     @OnClose
     public void onClose(@PathParam(value = "user-id") Long userId){
+        // 移除下线用户连接信息
         sessionPools.remove(userId);
         // 在线人数-1
         onlineNum.decrementAndGet();
@@ -65,6 +77,13 @@ public class WebSocketServer {
         broadcastOnlineMessage();
 
         log.error("用户:"+userId+"下线!");
+    }
+
+
+    // 连接出错时调用
+    @OnError
+    public void OnError(Session session, Throwable throwable) {
+        log.error("websocket 错误:"+throwable.getMessage());
     }
 
 
